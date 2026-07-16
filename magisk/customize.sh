@@ -27,16 +27,8 @@ cp "$MODPATH/bin/$ABI/runsvchdir" "$MODPATH/system/bin/"
 # Copy wrapper scripts
 cp "$MODPATH/scripts/"* "$MODPATH/system/bin/" 2>/dev/null || true
 
-# Install shell profile to auto-export SVDIR
-mkdir -p "$MODPATH/system/etc/profile.d"
-cat > "$MODPATH/system/etc/profile.d/runsvdir.sh" << 'PROFILE'
-export SVDIR=/data/adb/runsvdir/service
-export LOGDIR=/data/adb/runsvdir/log
-PROFILE
-
 # Set permissions
 set_perm_recursive "$MODPATH/system/bin"  0 0 0755 0755
-set_perm_recursive "$MODPATH/system/etc"  0 0 0755 0644
 
 # Clean up install-only files
 rm -rf "$MODPATH/bin" "$MODPATH/scripts"
