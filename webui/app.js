@@ -139,7 +139,7 @@ async function getAllServices() {
 
 async function getDefinitions() {
   var cmd1 = 'for d in /data/adb/modules/*/sv/*/; do [ -d "$d" ] && echo "$d"; done 2>/dev/null';
-  var cmd2 = 'for d in /data/adb/modules/sv/*/; do [ -d "$d" ] && echo "$d"; done 2>/dev/null';
+  var cmd2 = 'for d in /data/adb/sv/*/; do [ -d "$d" ] && echo "$d"; done 2>/dev/null';
   var r1 = await sh(cmd1);
   var r2 = await sh(cmd2);
   var defs = [];
@@ -149,7 +149,7 @@ async function getDefinitions() {
     var lines = r1.stdout.split('\n');
     for (var i = 0; i < lines.length; i++) {
       var m = lines[i].match(/\/data\/adb\/modules\/(.+?)\/sv\/(.+?)\/$/);
-      if (m && m[1] !== 'sv') {
+      if (m) {
         seen[m[2]] = true;
         defs.push({ source: 'module', module: m[1], name: m[2] });
       }
@@ -159,7 +159,7 @@ async function getDefinitions() {
   if (r2.stdout) {
     var lines2 = r2.stdout.split('\n');
     for (var j = 0; j < lines2.length; j++) {
-      var m2 = lines2[j].match(/\/data\/adb\/modules\/sv\/(.+?)\/$/);
+      var m2 = lines2[j].match(/\/data\/adb\/sv\/(.+?)\/$/);
       if (m2 && !seen[m2[1]]) {
         seen[m2[1]] = true;
         defs.push({ source: 'unified', module: 'sv', name: m2[1] });
@@ -171,7 +171,7 @@ async function getDefinitions() {
 }
 
 function getDefPath(def) {
-  if (def.source === 'unified') return '/data/adb/modules/sv/' + def.name;
+  if (def.source === 'unified') return '/data/adb/sv/' + def.name;
   return '/data/adb/modules/' + def.module + '/sv/' + def.name;
 }
 
