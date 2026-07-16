@@ -131,13 +131,18 @@ async function getServiceStatus(name) {
   return parseStatus(name, r.stdout);
 }
 
+async function checkLogDown(name) {
+  var r = await sh('[ -f ' + escapeSh(SVDIR + '/' + name + '/log/down') + ' ] && echo 1 || echo 0');
+  return r.stdout === '1';
+}
+
 async function getAllServices() {
   var names = await listServiceNames();
   var svcs = await Promise.all(names.map(async function (name) {
-    var parts = await Promise.all([getServiceMeta(name), getServiceStatus(name)]);
-    var meta = parts[0], status = parts[1];
-    var hasLog = await checkHasLog(name);
-    return Object.assign({ name: name }, meta, status, { hasLog: hasLog });
+    var parts = await Promise.all([getServiceMeta(name), getServiceStatus(name), checkHasLog(name)]);
+    var meta = parts[0], status = parts[1], hasLog = parts[2];
+    var logHasDown = hasLog ? await checkLogDown(name) : false;
+    return Object.assign({ name: name }, meta, status, { hasLog: hasLog, logHasDown: logHasDown });
   }));
   return svcs;
 }
@@ -288,6 +293,9 @@ function renderServiceCard(svc) {
       '<button class="btn btn-green" data-svc="' + ln + '" data-act="up">Up</button>',
       '<button class="btn btn-red" data-svc="' + ln + '" data-act="down">Down</button>',
       '<button class="btn btn-accent" data-svc="' + ln + '" data-act="restart">Restart</button>',
+      svc.logHasDown
+        ? '<button class="btn btn-green" data-svc="' + ln + '" data-act="enable">Enable</button>'
+        : '<button class="btn btn-red" data-svc="' + ln + '" data-act="disable">Disable</button>',
       '</div>',
       '</div>'
     ].join('');
