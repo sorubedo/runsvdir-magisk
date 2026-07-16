@@ -76,6 +76,11 @@ async function getServiceMeta(name) {
   };
 }
 
+async function checkHasLog(name) {
+  var r = await sh('[ -f ' + escapeSh(SVDIR + '/' + name + '/log/run') + ' ] && echo 1 || echo 0');
+  return r.stdout === '1';
+}
+
 function parseStatus(name, text) {
   var result = {
     name: name,
@@ -85,6 +90,7 @@ function parseStatus(name, text) {
     extra: '',
     logState: null,
     logPid: null,
+    logUptime: 0,
     error: null
   };
   if (!text) return result;
@@ -109,10 +115,11 @@ function parseStatus(name, text) {
 
   var logPart = text.split(';').slice(1).join(';').trim();
   if (logPart) {
-    var lm = logPart.match(/^(run|down|finish|wait):\s+.*?\/log:\s+(?:\(pid\s+(\d+)\)\s+)?\d+s/);
+    var lm = logPart.match(/^(run|down|finish|wait):\s+.*?\/log:\s+(?:\(pid\s+(\d+)\)\s+)?(\d+)s/);
     if (lm) {
       result.logState = lm[1];
       result.logPid = lm[2] ? parseInt(lm[2], 10) : null;
+      result.logUptime = parseInt(lm[3], 10);
     }
   }
 
@@ -126,11 +133,11 @@ async function getServiceStatus(name) {
 
 async function getAllServices() {
   var names = await listServiceNames();
-  var svcs = await Promise.all(names.map(function (name) {
-    return Promise.all([getServiceMeta(name), getServiceStatus(name)]).then(function (parts) {
-      var meta = parts[0], status = parts[1];
-      return Object.assign({ name: name }, meta, status);
-    });
+  var svcs = await Promise.all(names.map(async function (name) {
+    var parts = await Promise.all([getServiceMeta(name), getServiceStatus(name)]);
+    var meta = parts[0], status = parts[1];
+    var hasLog = await checkHasLog(name);
+    return Object.assign({ name: name }, meta, status, { hasLog: hasLog });
   }));
   return svcs;
 }
@@ -149,7 +156,7 @@ async function getDefinitions() {
     var lines = r1.stdout.split('\n');
     for (var i = 0; i < lines.length; i++) {
       var m = lines[i].match(/\/data\/adb\/modules\/(.+?)\/sv\/(.+?)\/$/);
-      if (m) {
+      if (m && m[2] !== 'log') {
         seen[m[2]] = true;
         defs.push({ source: 'module', module: m[1], name: m[2] });
       }
@@ -160,7 +167,7 @@ async function getDefinitions() {
     var lines2 = r2.stdout.split('\n');
     for (var j = 0; j < lines2.length; j++) {
       var m2 = lines2[j].match(/\/data\/adb\/sv\/(.+?)\/$/);
-      if (m2 && !seen[m2[1]]) {
+      if (m2 && !seen[m2[1]] && m2[1] !== 'log') {
         seen[m2[1]] = true;
         defs.push({ source: 'unified', module: 'sv', name: m2[1] });
       }
@@ -254,15 +261,37 @@ function renderServiceCard(svc) {
   } else if (svc.state !== 'unknown' && svc.state !== 'fail' && svc.state !== 'warn') {
     parts.push('<span class="badge badge-up sbadge">enabled</span>');
   }
-  if (svc.logState) {
-    parts.push('log:' + (svc.logState === 'run' ? 'up' : 'down') + (svc.logPid ? '(pid ' + svc.logPid + ')' : ''));
-  }
   if (svc.error) {
     parts.push('<span class="badge badge-down sbadge">' + esc(svc.error) + '</span>');
   }
 
   var sep = '<span class="sep">|</span>';
   var n = attr(svc.name);
+
+  var subHtml = '';
+  if (svc.hasLog) {
+    var lName = svc.name + '/log';
+    var ln = attr(lName);
+    var lState = svc.logState || 'down';
+    var lCls = stateClassMap[lState] || 'badge-down';
+    var lMeta = [];
+    if (svc.logPid) lMeta.push('pid ' + svc.logPid);
+    if (svc.logUptime > 0) lMeta.push(formatUptime(svc.logUptime));
+    subHtml = [
+      '<div class="subsvc">',
+      '<div class="subsvc-header">',
+      '<span class="subsvc-title">log</span>',
+      '<span class="badge ' + lCls + '">' + lState + '</span>',
+      '</div>',
+      lMeta.length ? '<div class="subsvc-meta">' + lMeta.join(sep) + '</div>' : '',
+      '<div class="subsvc-actions">',
+      '<button class="btn btn-green" data-svc="' + ln + '" data-act="up">Up</button>',
+      '<button class="btn btn-red" data-svc="' + ln + '" data-act="down">Down</button>',
+      '<button class="btn btn-accent" data-svc="' + ln + '" data-act="restart">Restart</button>',
+      '</div>',
+      '</div>'
+    ].join('');
+  }
 
   return [
     '<div class="card">',
@@ -282,6 +311,7 @@ function renderServiceCard(svc) {
       ? '<button class="btn btn-green" data-svc="' + n + '" data-act="enable">Enable</button>'
       : '<button class="btn btn-red" data-svc="' + n + '" data-act="disable">Disable</button>',
     '</div>',
+    subHtml,
     '</div>'
   ].join('');
 }

@@ -227,3 +227,46 @@ body {
   font-size: 0.75rem;
   color: var(--green);
 }
+
+/* Sub-service (log) section */
+.subsvc {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  background: rgba(124, 58, 237, 0.04);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.subsvc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 6px;
+}
+.subsvc-title {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+.subsvc-title::before {
+  content: '\2514\2500 ';
+  color: var(--text-dim);
+}
+.subsvc-meta {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.subsvc-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.subsvc-actions .btn {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  min-height: 28px;
+}
