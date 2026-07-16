@@ -5,3 +5,5 @@
 mkdir -p /data/adb/runsvdir/service
 mkdir -p /data/adb/runsvdir/log/sv
 mkdir -p /data/adb/runsvdir/run
+
+rm -f /data/adb/runsvdir/run/runsvdir.pid

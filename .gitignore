@@ -3,5 +3,4 @@ node_modules/
 build/
 *.zip
 magisk/webroot/
-ref/termux-services/
-ref/void-runit/
+ref/
