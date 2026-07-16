@@ -115,7 +115,7 @@ function parseStatus(name, text) {
 
   var logPart = text.split(';').slice(1).join(';').trim();
   if (logPart) {
-    var lm = logPart.match(/^(run|down|finish|wait):\s+.*?\/log:\s+(?:\(pid\s+(\d+)\)\s+)?(\d+)s/);
+    var lm = logPart.match(/^(run|down|finish|wait):\s+log:\s+(?:\(pid\s+(\d+)\)\s+)?(\d+)s/);
     if (lm) {
       result.logState = lm[1];
       result.logPid = lm[2] ? parseInt(lm[2], 10) : null;
