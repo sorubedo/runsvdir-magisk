@@ -98,8 +98,7 @@ pgrep runsvdir
 │   ├── runsvchdir
 │   ├── runsvdir-magisk
 │   ├── sv-enable
-│   ├── sv-disable
-│   └── svlogger
+│   └── sv-disable
 ├── webroot/                       # WebUI（KernelSU / MMRL）
 │   ├── index.html
 │   ├── *.js
@@ -162,7 +161,6 @@ mkdir -p /data/adb/runsvdir/log/sv/<服务名>
 exec svlogd -tt /data/adb/runsvdir/log/sv/<服务名>
 ```
 
-也可直接使用内置的 `svlogger` 脚本：`log/run` 内容只需 `#!/system/bin/sh` + `exec svlogger`。
 
 ```bash
 chmod +x /data/adb/runsvdir/service/<服务名>/run

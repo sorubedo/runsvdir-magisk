@@ -100,8 +100,7 @@ pgrep runsvdir
 │   ├── runsvchdir
 │   ├── runsvdir-magisk
 │   ├── sv-enable
-│   ├── sv-disable
-│   └── svlogger
+│   └── sv-disable
 ├── webroot/                      # WebUI (KernelSU / MMRL)
 │   ├── index.html
 │   ├── *.js
@@ -163,7 +162,6 @@ mkdir -p /data/adb/runsvdir/log/sv/<svc-name>
 exec svlogd -tt /data/adb/runsvdir/log/sv/<svc-name>
 ```
 
-You can also use the built-in `svlogger` script: `log/run` needs only `#!/system/bin/sh` + `exec svlogger`.
 
 ```bash
 chmod +x /data/adb/runsvdir/service/<svc-name>/run
