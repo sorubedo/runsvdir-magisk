@@ -138,19 +138,40 @@ async function getAllServices() {
 // --- Definitions ---
 
 async function getDefinitions() {
-  var cmd = 'for d in /data/adb/modules/*/sv/*/; do [ -d "$d" ] && echo "$d"; done 2>/dev/null';
-  var r = await sh(cmd);
-  if (!r.stdout) return [];
+  var cmd1 = 'for d in /data/adb/modules/*/sv/*/; do [ -d "$d" ] && echo "$d"; done 2>/dev/null';
+  var cmd2 = 'for d in /data/adb/modules/sv/*/; do [ -d "$d" ] && echo "$d"; done 2>/dev/null';
+  var r1 = await sh(cmd1);
+  var r2 = await sh(cmd2);
   var defs = [];
-  var lines = r.stdout.split('\n');
-  for (var i = 0; i < lines.length; i++) {
-    var m = lines[i].match(/\/data\/adb\/modules\/(.+?)\/sv\/(.+?)\/$/);
-    if (m) defs.push({ module: m[1], name: m[2] });
+  var seen = {};
+
+  if (r1.stdout) {
+    var lines = r1.stdout.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var m = lines[i].match(/\/data\/adb\/modules\/(.+?)\/sv\/(.+?)\/$/);
+      if (m && m[1] !== 'sv') {
+        seen[m[2]] = true;
+        defs.push({ source: 'module', module: m[1], name: m[2] });
+      }
+    }
   }
+
+  if (r2.stdout) {
+    var lines2 = r2.stdout.split('\n');
+    for (var j = 0; j < lines2.length; j++) {
+      var m2 = lines2[j].match(/\/data\/adb\/modules\/sv\/(.+?)\/$/);
+      if (m2 && !seen[m2[1]]) {
+        seen[m2[1]] = true;
+        defs.push({ source: 'unified', module: 'sv', name: m2[1] });
+      }
+    }
+  }
+
   return defs;
 }
 
 function getDefPath(def) {
+  if (def.source === 'unified') return '/data/adb/modules/sv/' + def.name;
   return '/data/adb/modules/' + def.module + '/sv/' + def.name;
 }
 
@@ -268,6 +289,8 @@ function renderServiceCard(svc) {
 function renderDefCard(def, linked) {
   var n = attr(def.name);
   var m = attr(def.module);
+  var src = attr(def.source);
+  var tagLabel = esc(def.module) + (def.source === 'unified' ? ' (unified)' : '');
   return [
     '<div class="card' + (linked ? ' def-linked' : '') + '">',
     '<div class="card-header">',
@@ -275,12 +298,12 @@ function renderDefCard(def, linked) {
     '<span class="badge ' + (linked ? 'badge-up' : 'badge-dim') + '">' + (linked ? 'linked' : 'unlinked') + '</span>',
     '</div>',
     '<div class="card-meta">',
-    '<span class="tag">' + esc(def.module) + '</span>',
+    '<span class="tag">' + tagLabel + '</span>',
     '</div>',
     '<div class="card-actions">',
     linked
       ? '<button class="btn btn-red" data-def="' + n + '" data-act="unlink">Unlink</button>'
-      : '<button class="btn btn-accent2" data-def="' + n + '" data-defmod="' + m + '" data-act="link">Link</button>',
+      : '<button class="btn btn-accent2" data-def="' + n + '" data-defmod="' + m + '" data-defsrc="' + src + '" data-act="link">Link</button>',
     '</div>',
     '</div>'
   ].join('');
@@ -406,7 +429,8 @@ function bindDefActions() {
 
     if (act === 'link') {
       var mod = btn.dataset.defmod;
-      var ok = await linkDef({ name: name, module: mod });
+      var src = btn.dataset.defsrc;
+      var ok = await linkDef({ name: name, module: mod, source: src });
       toast('Linking ' + name + (ok ? ' OK' : ' failed'), !ok);
     } else if (act === 'unlink') {
       var ok = await unlinkService(name);

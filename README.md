@@ -187,6 +187,38 @@ Modules can place service definitions in `/data/adb/modules/<module_id>/sv/` and
 ln -s /data/adb/modules/<module_id>/sv/<svc-name> /data/adb/runsvdir/service/<svc-name>
 ```
 
+### Unified service directory
+
+A persistent, merge-friendly service directory is provided at `/data/adb/modules/sv/`. Unlike module-specific `sv/` directories — which are replaced entirely on module update/install — this directory is shared across all modules and **persists across module updates**. User modifications (e.g., `down` files, custom `conf`) placed here will never be lost.
+
+```
+/data/adb/modules/sv/
+├── myservice/
+│   ├── run
+│   └── conf
+└── ...
+```
+
+All service definitions from `/data/adb/modules/sv/` appear in the WebUI's **Definitions** tab with a `(unified)` label.
+
+### For module developers — using the unified directory
+
+If your module ships services into `/data/adb/modules/sv/`, you must use **merge-copy** (not directory replacement) to avoid wiping other modules' services. Implement this in your module's `customize.sh` and `uninstall.sh`:
+
+**`customize.sh`** (installation):
+
+```bash
+# Copy services into the unified directory (merge, don't replace)
+cp -r "$MODPATH/service/"* /data/adb/modules/sv/ 2>/dev/null
+```
+
+**`uninstall.sh`** (removal):
+
+```bash
+# Remove only your own service directories from the unified directory
+rm -rf /data/adb/modules/sv/<your-service-name>
+```
+
 ---
 
 ## WebUI
@@ -194,7 +226,7 @@ ln -s /data/adb/modules/<module_id>/sv/<svc-name> /data/adb/runsvdir/service/<sv
 This module includes a WebUI for KernelSU / MMRL manager apps. It provides:
 
 - **Services** tab — view all active services with status, PID, uptime; up / down / restart / enable / disable
-- **Definitions** tab — browse service definitions from all modules (`/data/adb/modules/*/sv/`); link / unlink them into the active service directory
+- **Definitions** tab — browse service definitions from all modules (`/data/adb/modules/*/sv/`) and the unified directory (`/data/adb/modules/sv/`); link / unlink them into the active service directory
 
 The WebUI is built with vanilla HTML/CSS/JS and bundled with [Parcel](https://parceljs.org/). Source files are in `webui/`, built output goes to `magisk/webroot/`.
 
