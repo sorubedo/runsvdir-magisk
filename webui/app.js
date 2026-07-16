@@ -282,6 +282,11 @@ function renderServiceCard(svc) {
     var lMeta = [];
     if (svc.logPid) lMeta.push('pid ' + svc.logPid);
     if (svc.logUptime > 0) lMeta.push(formatUptime(svc.logUptime));
+    if (svc.logHasDown) {
+      lMeta.push('<span class="badge badge-down sbadge">disabled</span>');
+    } else if (lState && lState !== 'unknown' && lState !== 'fail' && lState !== 'warn') {
+      lMeta.push('<span class="badge badge-up sbadge">enabled</span>');
+    }
     subHtml = [
       '<div class="subsvc">',
       '<div class="subsvc-header">',
