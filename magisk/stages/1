@@ -1,0 +1,15 @@
+#!/system/bin/sh
+# Stage 1: Environment setup
+# Called manually or by post-fs-data.sh
+
+MODDIR=${0%/*}
+MAGISKTMP=$(magisk --path 2>/dev/null || echo /sbin)
+
+export SVDIR=/data/adb/runsvdir/service
+export LOGDIR=/data/adb/runsvdir/log
+export PATH="$MODDIR/system/bin:$MAGISKTMP/.magisk/busybox:$PATH"
+
+# Create required directories
+mkdir -p "$SVDIR" 2>/dev/null
+mkdir -p "$LOGDIR/sv" 2>/dev/null
+mkdir -p /data/adb/runsvdir/run 2>/dev/null

@@ -1,0 +1,21 @@
+#!/system/bin/sh
+
+if [ -z "$1" ]; then
+    echo "Usage: sv-enable <service-name>"
+    exit 1
+fi
+
+if [ -z "$SVDIR" ]; then
+    SVDIR=/data/adb/runsvdir/service
+fi
+
+SVC="$SVDIR/$1"
+
+if [ ! -d "$SVC" ]; then
+    echo "Error: service '$1' not found in $SVDIR"
+    exit 1
+fi
+
+rm -f "$SVC/down"
+sv up "$1"
+echo "Service '$1' enabled and starting"

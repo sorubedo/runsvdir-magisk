@@ -1,0 +1,78 @@
+#!/system/bin/sh
+
+export SVDIR=/data/adb/runsvdir/service
+export LOGDIR=/data/adb/runsvdir/log
+PIDDIR=/data/adb/runsvdir/run
+PIDFILE=$PIDDIR/runsvdir.pid
+
+start() {
+    if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+        echo "runsvdir already running (pid $(cat "$PIDFILE"))"
+        return 1
+    fi
+
+    mkdir -p "$PIDDIR"
+    mkdir -p "$LOGDIR/sv"
+
+    # The log progress string: each . is one byte of progress
+    runsvdir -P "$SVDIR" \
+        'log: ...........................................................................................................................................................................................................................................................................................................................................................................................................' &
+    echo $! > "$PIDFILE"
+    echo "runsvdir started (pid $!)"
+}
+
+stop() {
+    if [ ! -f "$PIDFILE" ]; then
+        echo "runsvdir not running"
+        return 1
+    fi
+
+    PID=$(cat "$PIDFILE")
+
+    # Tell runsvdir to exit gracefully
+    kill -TERM "$PID" 2>/dev/null
+
+    # Wait for runsvdir to exit
+    for i in $(seq 1 50); do
+        if ! kill -0 "$PID" 2>/dev/null; then
+            break
+        fi
+        sleep 1
+    done
+
+    # Force kill runsvdir if still alive
+    kill -KILL "$PID" 2>/dev/null
+
+    # Kill all runsv supervise processes
+    for pidf in "$SVDIR"/*/supervise/pid "$SVDIR"/*/log/supervise/pid; do
+        if [ -f "$pidf" ]; then
+            kill -TERM $(cat "$pidf") 2>/dev/null || true
+        fi
+    done
+
+    # Clean up supervise FIFO directories
+    for f in "$SVDIR"/*/supervise "$SVDIR"/*/log/supervise; do
+        rm -rf "$f" 2>/dev/null || true
+    done
+
+    rm -f "$PIDFILE"
+    echo "runsvdir stopped"
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep 1
+        start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac

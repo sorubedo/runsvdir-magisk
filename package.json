@@ -1,0 +1,15 @@
+{
+  "name": "runsvdir-webui",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "parcel build webui/index.html --dist-dir magisk/webroot --public-url . --no-source-maps",
+    "dev": "parcel webui/index.html --dist-dir magisk/webroot --public-url ."
+  },
+  "devDependencies": {
+    "parcel": "^2.12.0"
+  },
+  "dependencies": {
+    "kernelsu": "^1.0.0"
+  }
+}

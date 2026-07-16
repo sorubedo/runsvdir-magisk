@@ -1,0 +1,27 @@
+{
+  "name": "Runsvdir-Magisk",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "root",
+  "mounts": [
+    "source=${localEnv:HOME}/AGENTS/opencode/config,target=/root/.config/opencode,type=bind",
+    "source=${localEnv:HOME}/AGENTS/opencode/data,target=/root/.local/share/opencode,type=bind",
+    "source=${localEnv:HOME}/AGENTS/opencode/cache,target=/root/.cache/opencode,type=bind",
+    "source=${localEnv:HOME}/AGENTS/codex,target=/root/.codex,type=bind",
+    "source=${localEnv:HOME}/AGENTS/cc-switch,target=/root/.cc-switch,type=bind",
+    "source=${localEnv:HOME}/.gitconfig,target=/root/.gitconfig,type=bind,readonly"
+  ],
+  "runArgs": [
+    "--cap-add=SYS_ADMIN",
+    "--security-opt",
+    "seccomp=unconfined"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "sst-dev.opencode"
+      ]
+    }
+  }
+}

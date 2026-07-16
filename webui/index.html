@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Runsvdir Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <h1>Runsvdir</h1>
+      <span id="daemon-badge" class="badge badge-down">daemon stopped</span>
+    </div>
+    <button id="btn-refresh" class="btn-icon" title="Refresh">&#x21bb;</button>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="services">Services</button>
+    <button class="tab" data-tab="definitions">Definitions</button>
+  </nav>
+
+  <main>
+    <section id="tab-services" class="tab-content active">
+      <div class="stats" id="stats-bar"></div>
+      <div id="service-list" class="card-list"></div>
+      <div id="services-empty" class="empty hidden">No active services. Link a definition below to get started.</div>
+    </section>
+
+    <section id="tab-definitions" class="tab-content">
+      <div id="def-list" class="card-list"></div>
+      <div id="defs-empty" class="empty hidden">No service definitions found in /data/adb/modules/*/sv/</div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

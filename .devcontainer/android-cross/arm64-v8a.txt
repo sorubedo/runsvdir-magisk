@@ -1,0 +1,19 @@
+# Android cross-compilation files for Meson build system
+#
+# Usage:
+#   meson setup build-android-arm64 --cross-file /opt/android-cross/arm64-v8a.txt
+#   ninja -C build-android-arm64
+
+[binaries]
+c = '/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang'
+cpp = '/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang++'
+ar = '/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar'
+strip = '/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip'
+ranlib = '/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib'
+objcopy = '/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objcopy'
+
+[host_machine]
+system = 'android'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'

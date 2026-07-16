@@ -1,0 +1,15 @@
+#!/system/bin/sh
+# Log service run script for runit services.
+# Place as: $SVDIR/<service>/log/run
+# This extracts the service name from the path and runs svlogd.
+
+pwd=${PWD%/*}
+service=${pwd##*/}
+
+if [ -z "$LOGDIR" ]; then
+    LOGDIR=/data/adb/runsvdir/log
+fi
+
+mkdir -p "$LOGDIR/sv/$service"
+
+exec svlogd -tt "$LOGDIR/sv/$service"

@@ -1,0 +1,7 @@
+#!/system/bin/sh
+# Stage 2: Start services
+# Called by service.sh after stage 1
+
+if [ -x "$MODDIR/system/bin/runsvdir-magisk" ]; then
+    "$MODDIR/system/bin/runsvdir-magisk" start
+fi

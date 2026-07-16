@@ -1,0 +1,7 @@
+node_modules/
+.parcel-cache/
+build/
+*.zip
+magisk/webroot/
+ref/termux-services/
+ref/void-runit/

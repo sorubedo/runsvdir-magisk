@@ -1,0 +1,19 @@
+#!/system/bin/sh
+# Stage 3: Shutdown services
+# Called manually or by uninstall.sh
+
+MODDIR=${0%/*}
+
+# Send force-stop to all supervised services
+if command -v sv >/dev/null 2>&1; then
+    for svc in "$SVDIR"/*/; do
+        [ -d "$svc" ] || continue
+        name=$(basename "$svc")
+        sv force-stop "$name" 2>/dev/null
+    done
+fi
+
+# Stop runsvdir
+if [ -x "$MODDIR/system/bin/runsvdir-magisk" ]; then
+    "$MODDIR/system/bin/runsvdir-magisk" stop 2>/dev/null
+fi

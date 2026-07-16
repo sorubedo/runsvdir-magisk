@@ -1,0 +1,21 @@
+#!/system/bin/sh
+
+if [ -z "$1" ]; then
+    echo "Usage: sv-disable <service-name>"
+    exit 1
+fi
+
+if [ -z "$SVDIR" ]; then
+    SVDIR=/data/adb/runsvdir/service
+fi
+
+SVC="$SVDIR/$1"
+
+if [ ! -d "$SVC" ]; then
+    echo "Error: service '$1' not found in $SVDIR"
+    exit 1
+fi
+
+touch "$SVC/down"
+sv down "$1"
+echo "Service '$1' disabled and stopping"
