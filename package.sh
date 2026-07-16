@@ -66,11 +66,6 @@ mkdir -p "$PKGDIR/scripts"
 cp "$PROJECT_DIR/scripts/"* "$PKGDIR/scripts/"
 chmod 755 "$PKGDIR/scripts/"*
 
-# Boot stages
-mkdir -p "$PKGDIR/stages"
-cp "$PROJECT_DIR/magisk/stages/"* "$PKGDIR/stages/"
-chmod 755 "$PKGDIR/stages/"*
-
 # WebUI (KernelSU/MMRL)
 if [ -d "$PROJECT_DIR/magisk/webroot" ]; then
     mkdir -p "$PKGDIR/webroot"
