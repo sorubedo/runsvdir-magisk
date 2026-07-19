@@ -1,12 +1,11 @@
 #!/system/bin/sh
 
-# Map Magisk ARCH to our ABI directory name
+# Map Magisk ARCH to Termux ABI directory name
 case "$ARCH" in
-    arm64)   ABI=arm64-v8a ;;
-    arm)     ABI=armeabi-v7a ;;
-    x64)     ABI=x86_64 ;;
-    x86)     ABI=x86 ;;
-    riscv64) ABI=riscv64 ;;
+    arm64) ABI=aarch64; LIBDIR=lib64 ;;
+    arm)   ABI=arm;    LIBDIR=lib ;;
+    x64)   ABI=x86_64; LIBDIR=lib64 ;;
+    x86)   ABI=i686;   LIBDIR=lib ;;
     *)
         ui_print "! Unsupported architecture: $ARCH"
         abort "! Aborting installation"
@@ -19,19 +18,23 @@ ui_print "- Installing runsvdir binaries for $ARCH ($ABI)"
 mkdir -p "$MODPATH/system/bin"
 cp "$MODPATH/bin/$ABI/runsvdir"   "$MODPATH/system/bin/"
 cp "$MODPATH/bin/$ABI/runsv"      "$MODPATH/system/bin/"
-cp "$MODPATH/bin/$ABI/sv"         "$MODPATH/system/bin/"
 cp "$MODPATH/bin/$ABI/svlogd"     "$MODPATH/system/bin/"
 cp "$MODPATH/bin/$ABI/chpst"      "$MODPATH/system/bin/"
 cp "$MODPATH/bin/$ABI/runsvchdir" "$MODPATH/system/bin/"
 
-# Copy wrapper scripts
-cp "$MODPATH/scripts/"* "$MODPATH/system/bin/" 2>/dev/null || true
+# Place real sv in .runit/ (basename stays "sv" to avoid LSB mode)
+mkdir -p "$MODPATH/system/bin/.runit"
+cp "$MODPATH/bin/$ABI/sv" "$MODPATH/system/bin/.runit/sv"
+
+# Place librunit.so in standard system lib path (linker finds it automatically)
+mkdir -p "$MODPATH/system/$LIBDIR"
+cp "$MODPATH/bin/$ABI/librunit.so" "$MODPATH/system/$LIBDIR/"
 
 # Set permissions
 set_perm_recursive "$MODPATH/system/bin"  0 0 0755 0755
 
 # Clean up install-only files
-rm -rf "$MODPATH/bin" "$MODPATH/scripts"
+rm -rf "$MODPATH/bin"
 
 FINAL_PATH=/data/adb/runsvdir
 ui_print ""

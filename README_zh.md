@@ -1,6 +1,6 @@
 # runsvdir-magisk
 
-基于 Runit 的 Android 服务管理器。提供 `runsvdir`、`runsv`、`sv`、`svlogd`、`chpst`、`runsvchdir` 六个工具，静态链接，适配 Android Bionic libc，最低 API 24。
+基于 Runit 的 Android 服务管理器。将 Termux 预编译的 `runsvdir`、`runsv`、`sv`、`svlogd`、`chpst`、`runsvchdir` 二进制打包为 Magisk/KernelSU 模块，实现持久化的服务监管。
 
 [English](README.md)
 
@@ -11,7 +11,7 @@
 
 ## 支持的架构
 
-arm64-v8a、armeabi-v7a、x86_64、x86
+aarch64、arm、x86_64、i686（x86）
 
 ---
 
@@ -92,7 +92,8 @@ pgrep runsvdir
 ├── system/bin/
 │   ├── runsvdir
 │   ├── runsv
-│   ├── sv
+│   ├── sv                       # 包装脚本（自动设置 SVDIR → .runit/sv）
+│   ├── .runit/sv                # 真正的 sv 二进制
 │   ├── svlogd
 │   ├── chpst
 │   ├── runsvchdir
@@ -240,6 +241,6 @@ npm run build     # 打包 WebUI → magisk/webroot/
 
 ## 许可
 
-Runit (BSD 3-Clause)。源码基于 [grimler/runit](https://git.sr.ht/~grimler/runit)。
+本项目（shell 脚本、WebUI、模块打包） — [MIT](LICENSE)。
 
-使用 OpenCode + DeepSeek V4 PRO 修改移植。
+附带二进制来自 [Termux 的 runit 包](https://github.com/termux/termux-packages/tree/master/packages/runit)（基于 [grimler/runit](https://git.sr.ht/~grimler/runit)） — BSD 3-Clause。

@@ -1,0 +1,23 @@
+#!/sbin/sh
+umask 022
+OUTFD=$2
+ZIPFILE=$3
+ui_print() { echo "$1"; }
+abort() { ui_print "$1"; exit 1; }
+mount /data 2>/dev/null
+if [ -f /data/adb/magisk/util_functions.sh ]; then
+  . /data/adb/magisk/util_functions.sh
+  [ $MAGISK_VER_CODE -gt 20400 ] || abort "! Magisk v20.4+ required"
+  install_module
+  exit 0
+fi
+ui_print "- runsvdir-magisk"
+ui_print "- Manual install..."
+MODPATH=/data/adb/modules/runsvdir
+rm -rf "$MODPATH"
+mkdir -p "$MODPATH"
+unzip -o "$ZIPFILE" -d "$MODPATH" >/dev/null 2>&1
+cd "$MODPATH"
+. ./customize.sh
+rm -rf "$MODPATH/bin" "$MODPATH/scripts" "$MODPATH/META-INF"
+ui_print "- Done. Reboot to start."

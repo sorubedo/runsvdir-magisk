@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build WebUI
+        run: |
+          npm ci
+          npm run build
+
+      - name: Download Termux runit binaries
+        run: bash dl-bins.sh
+
+      - name: Prepare module
+        id: prep
+        run: |
+          VERSION=$(grep '^version=' magisk/module.prop | cut -d= -f2)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          mkdir -p dist
+          cp -r bin dist/
+          cp -r magisk/* dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runsvdir-magisk-${{ steps.prep.outputs.version }}
+          path: dist/

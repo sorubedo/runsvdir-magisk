@@ -1,0 +1,50 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build WebUI
+        run: |
+          npm ci
+          npm run build
+
+      - name: Download Termux runit binaries
+        run: bash dl-bins.sh
+
+      - name: Prepare module
+        id: prep
+        run: |
+          VERSION=$(grep '^version=' magisk/module.prop | cut -d= -f2)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          mkdir -p dist
+          cp -r bin dist/
+          cp -r magisk/* dist/
+
+      - name: Package module
+        run: |
+          cd dist
+          zip -r "../runsvdir-magisk-${{ steps.prep.outputs.version }}.zip" .
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prep.outputs.version }}
+          name: ${{ steps.prep.outputs.version }}
+          files: runsvdir-magisk-${{ steps.prep.outputs.version }}.zip
+          draft: false
+          prerelease: false

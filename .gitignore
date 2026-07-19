@@ -1,6 +1,7 @@
 node_modules/
 .parcel-cache/
 build/
+/bin/
 *.zip
 magisk/webroot/
 ref/

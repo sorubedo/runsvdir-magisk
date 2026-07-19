@@ -1,6 +1,6 @@
 # runsvdir-magisk
 
-A Runit-based Android service manager. Provides six statically-linked tools — `runsvdir`, `runsv`, `sv`, `svlogd`, `chpst`, `runsvchdir` — built for Android Bionic libc, min API 24.
+A Runit-based Android service manager. Packages Termux-prebuild `runsvdir`, `runsv`, `sv`, `svlogd`, `chpst`, `runsvchdir` binaries into a Magisk/KernelSU module for persistent service supervision.
 
 [中文文档](README_zh.md)
 
@@ -11,7 +11,7 @@ A Runit-based Android service manager. Provides six statically-linked tools — 
 
 ## Supported ABIs
 
-arm64-v8a, armeabi-v7a, x86_64, x86
+aarch64, arm, x86_64, i686 (x86)
 
 ---
 
@@ -94,7 +94,8 @@ pgrep runsvdir
 ├── system/bin/
 │   ├── runsvdir
 │   ├── runsv
-│   ├── sv
+│   ├── sv                       # wrapper (sets SVDIR → .runit/sv)
+│   ├── .runit/sv                # real sv binary
 │   ├── svlogd
 │   ├── chpst
 │   ├── runsvchdir
@@ -238,6 +239,6 @@ npm run build     # bundle WebUI → magisk/webroot/
 
 ## License
 
-Runit (BSD 3-Clause). Source based on [grimler/runit](https://git.sr.ht/~grimler/runit).
+This project (shell scripts, WebUI, module packaging) — [MIT](LICENSE).
 
-Developed with OpenCode + DeepSeek V4 PRO.
+Bundled runit binaries from [Termux's runit package](https://github.com/termux/termux-packages/tree/master/packages/runit) (based on [grimler/runit](https://git.sr.ht/~grimler/runit)) — BSD 3-Clause.
