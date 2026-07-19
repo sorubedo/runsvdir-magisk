@@ -7,7 +7,6 @@ A Runit-based Android service manager. Packages Termux-prebuild `runsvdir`, `run
 ## Requirements
 
 - Rooted Android device (Magisk 20.4+ or KernelSU)
-- BusyBox (bundled with Magisk)
 
 ## Supported ABIs
 

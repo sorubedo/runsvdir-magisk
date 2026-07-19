@@ -7,7 +7,6 @@
 ## 环境要求
 
 - 已 root 的 Android 设备（Magisk 20.4+ 或 KernelSU）
-- BusyBox（Magisk 自带）
 
 ## 支持的架构
 
