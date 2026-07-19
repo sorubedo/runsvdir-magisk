@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+if ! command -v patchelf &> /dev/null; then
+    echo "ERROR: patchelf is required. Install with: apt install patchelf"
+    exit 1
+fi
+
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BINS_DIR="$PROJECT_DIR/bin"
 REPO_BASE="https://packages.termux.dev/apt/termux-main"
@@ -62,6 +67,13 @@ for ARCH in "${!ARCH_MAP[@]}"; do
     fi
     cp "$lib_src" "$DEST/"
     echo "  librunit.so ($(wc -c < "$DEST/librunit.so") bytes)"
+
+    # Strip Termux RUNPATH from all binaries (security: points to app-private dir)
+    echo "  removing RUNPATH..."
+    for bin in "${BINARIES[@]}"; do
+        patchelf --remove-rpath "$DEST/$bin"
+    done
+    patchelf --remove-rpath "$DEST/librunit.so"
 
     rm -rf "$TMPDIR"
     echo "=== $ARCH: done ==="

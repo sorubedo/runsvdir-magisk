@@ -22,7 +22,9 @@ jobs:
           npm run build
 
       - name: Download Termux runit binaries
-        run: bash dl-bins.sh
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq patchelf
+          bash dl-bins.sh
 
       - name: Prepare module
         id: prep
