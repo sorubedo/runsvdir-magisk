@@ -14,6 +14,16 @@ esac
 
 ui_print "- Installing runsvdir binaries for $ARCH ($ABI)"
 
+if [ ! -f "$MODPATH/bin/$ABI/runsvdir" ]; then
+    case "$ARCH" in
+        arm64) PACKAGE_ABI=arm64-v8a ;;
+        arm)   PACKAGE_ABI=armeabi-v7a ;;
+        x64)   PACKAGE_ABI=x86_64 ;;
+        x86)   PACKAGE_ABI=x86 ;;
+    esac
+    abort "! Wrong package: download the $PACKAGE_ABI build for this device"
+fi
+
 # Copy binaries
 mkdir -p "$MODPATH/system/bin"
 cp "$MODPATH/bin/$ABI/runsvdir"   "$MODPATH/system/bin/"
@@ -34,7 +44,7 @@ cp "$MODPATH/bin/$ABI/librunit.so" "$MODPATH/system/$LIBDIR/"
 set_perm_recursive "$MODPATH/system/bin"  0 0 0755 0755
 
 # Clean up install-only files
-rm -rf "$MODPATH/bin"
+rm -rf "${MODPATH:?}/bin"
 
 FINAL_PATH=/data/adb/runsvdir
 ui_print ""

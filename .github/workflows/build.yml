@@ -22,22 +22,75 @@ jobs:
           npm run build
 
       - name: Download Termux runit binaries
+        id: upstream
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq patchelf
           bash dl-bins.sh
 
-      - name: Prepare module
+      - name: Read module version
         id: prep
         run: |
           VERSION=$(grep '^version=' magisk/module.prop | cut -d= -f2)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-          mkdir -p dist
-          cp -r bin dist/
-          cp -r magisk/* dist/
+      - name: Package per ABI
+        run: bash package.sh
 
-      - name: Upload artifact
+      - name: Write build summary
+        env:
+          MODULE_VERSION: ${{ steps.prep.outputs.version }}
+          RUNIT_VERSION: ${{ steps.upstream.outputs.runit_version }}
+          TERMUX_PACKAGE_VERSION: ${{ steps.upstream.outputs.termux_package_version }}
+        run: |
+          {
+            echo "## runsvdir-magisk build"
+            echo
+            echo "- Module: $MODULE_VERSION"
+            echo "- runit: $RUNIT_VERSION"
+            echo "- Termux package: $TERMUX_PACKAGE_VERSION"
+            echo "- Packages: arm64-v8a, armeabi-v7a, x86_64, x86"
+            echo
+            echo '```text'
+            cat out/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload arm64-v8a artifact
         uses: actions/upload-artifact@v4
         with:
-          name: runsvdir-magisk-${{ steps.prep.outputs.version }}
-          path: dist/
+          name: runsvdir-magisk-${{ steps.prep.outputs.version }}-arm64-v8a
+          path: |
+            out/runsvdir-magisk-${{ steps.prep.outputs.version }}-arm64-v8a.zip
+            out/SHA256SUMS
+            out/upstream-versions.env
+          if-no-files-found: error
+
+      - name: Upload armeabi-v7a artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runsvdir-magisk-${{ steps.prep.outputs.version }}-armeabi-v7a
+          path: |
+            out/runsvdir-magisk-${{ steps.prep.outputs.version }}-armeabi-v7a.zip
+            out/SHA256SUMS
+            out/upstream-versions.env
+          if-no-files-found: error
+
+      - name: Upload x86_64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runsvdir-magisk-${{ steps.prep.outputs.version }}-x86_64
+          path: |
+            out/runsvdir-magisk-${{ steps.prep.outputs.version }}-x86_64.zip
+            out/SHA256SUMS
+            out/upstream-versions.env
+          if-no-files-found: error
+
+      - name: Upload x86 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runsvdir-magisk-${{ steps.prep.outputs.version }}-x86
+          path: |
+            out/runsvdir-magisk-${{ steps.prep.outputs.version }}-x86.zip
+            out/SHA256SUMS
+            out/upstream-versions.env
+          if-no-files-found: error

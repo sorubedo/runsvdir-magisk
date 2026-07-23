@@ -10,7 +10,14 @@ A Runit-based Android service manager. Packages Termux-prebuild `runsvdir`, `run
 
 ## Supported ABIs
 
-aarch64, arm, x86_64, i686 (x86)
+Download the ZIP matching the device architecture:
+
+| ZIP suffix | Android / Magisk architecture | Termux binary architecture |
+|---|---|---|
+| `arm64-v8a` | arm64 | aarch64 |
+| `armeabi-v7a` | arm | arm |
+| `x86_64` | x64 | x86_64 |
+| `x86` | x86 | i686 |
 
 ---
 
@@ -232,7 +239,11 @@ The WebUI is built with vanilla HTML/CSS/JS and bundled with [Parcel](https://pa
 
 ```bash
 npm run build     # bundle WebUI → magisk/webroot/
+./dl-bins.sh      # download Termux runit binaries for all ABIs
+./package.sh      # create one out/runsvdir-magisk-<version>-<abi>.zip per ABI
 ```
+
+Each ZIP contains only one ABI. Pass one or more ABI names to `package.sh` to build only those targets.
 
 ---
 

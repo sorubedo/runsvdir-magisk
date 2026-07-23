@@ -8,14 +8,17 @@ fi
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BINS_DIR="$PROJECT_DIR/bin"
+OUT_DIR="$PROJECT_DIR/out"
 REPO_BASE="https://packages.termux.dev/apt/termux-main"
 POOL="pool/main/r/runit"
+RUNIT_VERSION="2.1.2"
+TERMUX_PACKAGE_VERSION="${RUNIT_VERSION}-4"
 
 declare -A ARCH_MAP=(
-    ["aarch64"]="runit_2.1.2-4_aarch64.deb"
-    ["arm"]="runit_2.1.2-4_arm.deb"
-    ["i686"]="runit_2.1.2-4_i686.deb"
-    ["x86_64"]="runit_2.1.2-4_x86_64.deb"
+    ["aarch64"]="runit_${TERMUX_PACKAGE_VERSION}_aarch64.deb"
+    ["arm"]="runit_${TERMUX_PACKAGE_VERSION}_arm.deb"
+    ["i686"]="runit_${TERMUX_PACKAGE_VERSION}_i686.deb"
+    ["x86_64"]="runit_${TERMUX_PACKAGE_VERSION}_x86_64.deb"
 )
 
 BINARIES=("runsvdir" "runsv" "sv" "svlogd" "chpst" "runsvchdir")
@@ -88,3 +91,13 @@ for ARCH in "${!ARCH_MAP[@]}"; do
         echo "  $ARCH: MISSING"
     fi
 done
+
+mkdir -p "$OUT_DIR"
+{
+    printf 'runit_version=%s\n' "$RUNIT_VERSION"
+    printf 'termux_package_version=%s\n' "$TERMUX_PACKAGE_VERSION"
+} > "$OUT_DIR/upstream-versions.env"
+if [ -n "${GITHUB_OUTPUT:-}" ]; then
+    printf 'runit_version=%s\n' "$RUNIT_VERSION" >> "$GITHUB_OUTPUT"
+    printf 'termux_package_version=%s\n' "$TERMUX_PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+fi

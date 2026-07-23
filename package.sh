@@ -1,56 +1,83 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NAME="runsvdir-magisk"
 VERSION="$(sed -n 's/^version=//p' "$PROJECT_DIR/magisk/module.prop")"
-ZIPNAME="runsvdir-magisk-${VERSION}.zip"
-PKGDIR="/tmp/runsvdir-pkg"
-ABIS=("aarch64" "arm" "i686" "x86_64")
+OUT_DIR="$PROJECT_DIR/out"
+SUPPORTED_ABIS=(arm64-v8a armeabi-v7a x86_64 x86)
+BINARIES=(runsvdir runsv sv svlogd chpst runsvchdir librunit.so)
 
-echo "=== Step 0: Build WebUI ==="
-if [ -f "$PROJECT_DIR/package.json" ]; then
-    (cd "$PROJECT_DIR" && npm run build)
-    echo "   ok: webui"
-else
-    echo "   skip: no package.json"
+declare -A BIN_ABI=(
+    [arm64-v8a]=aarch64
+    [armeabi-v7a]=arm
+    [x86_64]=x86_64
+    [x86]=i686
+)
+
+usage() {
+    echo "Usage: $0 [arm64-v8a|armeabi-v7a|x86_64|x86 ...]"
+    echo "With no ABI arguments, packages all supported ABIs separately."
+    echo "Run npm run build and dl-bins.sh before packaging."
+}
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    usage
+    exit 0
 fi
 
-echo ""
-echo "=== Step 1: Download Termux runit binaries ==="
-bash "$PROJECT_DIR/dl-bins.sh"
+if [ "$#" -gt 0 ]; then
+    ABIS=("$@")
+else
+    ABIS=("${SUPPORTED_ABIS[@]}")
+fi
 
-echo ""
-echo "=== Step 2: Verify binaries ==="
 for ABI in "${ABIS[@]}"; do
-    if [ ! -f "$PROJECT_DIR/bin/$ABI/runsvdir" ]; then
-        echo "ERROR: runsvdir binary missing for $ABI"
-        echo "Run dl-bins.sh to download Termux runit binaries."
+    if [ -z "${BIN_ABI[$ABI]:-}" ]; then
+        echo "ERROR: unsupported ABI: $ABI" >&2
+        usage >&2
         exit 1
     fi
-    printf "   %-9s %s\n" "$ABI:" "$(file "$PROJECT_DIR/bin/$ABI/runsvdir" | sed 's/.*ELF/ELF/')"
 done
 
-echo ""
-echo "=== Step 3: Assemble package ==="
-rm -rf "$PKGDIR"
-mkdir -p "$PKGDIR"
+mkdir -p "$OUT_DIR"
+PACKAGES=()
 
-# Per-ABI binaries (not in magisk/, at repo root)
 for ABI in "${ABIS[@]}"; do
-    mkdir -p "$PKGDIR/bin/$ABI"
-    cp "$PROJECT_DIR/bin/$ABI/"* "$PKGDIR/bin/$ABI/"
+    SOURCE_ABI="${BIN_ABI[$ABI]}"
+    for binary in "${BINARIES[@]}"; do
+        if [ ! -f "$PROJECT_DIR/bin/$SOURCE_ABI/$binary" ]; then
+            echo "ERROR: missing bin/$SOURCE_ABI/$binary; run dl-bins.sh first" >&2
+            exit 1
+        fi
+    done
+
+    STAGE_DIR="$(mktemp -d)"
+    trap 'rm -rf "$STAGE_DIR"' EXIT
+
+    cp -a "$PROJECT_DIR/magisk/." "$STAGE_DIR/"
+    mkdir -p "$STAGE_DIR/bin/$SOURCE_ABI"
+    for binary in "${BINARIES[@]}"; do
+        cp -a "$PROJECT_DIR/bin/$SOURCE_ABI/$binary" "$STAGE_DIR/bin/$SOURCE_ABI/"
+    done
+    chmod 755 "$STAGE_DIR/META-INF/com/google/android/update-binary"
+
+    {
+        echo "moduleVersion=$VERSION"
+        echo "targetAbi=$ABI"
+        [ ! -f "$OUT_DIR/upstream-versions.env" ] || cat "$OUT_DIR/upstream-versions.env"
+    } > "$STAGE_DIR/build-info.prop"
+
+    ZIP_NAME="${NAME}-${VERSION}-${ABI}.zip"
+    ZIP_PATH="$OUT_DIR/$ZIP_NAME"
+    rm -f "$ZIP_PATH"
+    (cd "$STAGE_DIR" && zip -qr "$ZIP_PATH" .)
+    PACKAGES+=("$ZIP_NAME")
+
+    rm -rf "$STAGE_DIR"
+    trap - EXIT
+    echo "=> out/$ZIP_NAME ($(du -h "$ZIP_PATH" | cut -f1))"
 done
 
-# Everything else from magisk/ goes to ZIP root
-cp -r "$PROJECT_DIR/magisk/"* "$PKGDIR/"
-chmod 755 "$PKGDIR/META-INF/com/google/android/update-binary"
-
-echo ""
-echo "=== Step 4: Create zip ==="
-rm -f "$PROJECT_DIR/$ZIPNAME"
-cd "$PKGDIR"
-zip -r "$PROJECT_DIR/$ZIPNAME" . >/dev/null 2>&1
-
-echo ""
-echo "=== Done: $ZIPNAME ($(du -h "$PROJECT_DIR/$ZIPNAME" | cut -f1)) ==="
-ls -lh "$PROJECT_DIR/$ZIPNAME"
+(cd "$OUT_DIR" && sha256sum "${PACKAGES[@]}" > SHA256SUMS)
+echo "=> out/SHA256SUMS"
