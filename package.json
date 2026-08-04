@@ -10,6 +10,7 @@
     "parcel": "^2.12.0"
   },
   "dependencies": {
-    "kernelsu": "^1.0.0"
+    "kernelsu": "^1.0.0",
+    "lucide": "^1.28.0"
   }
 }

@@ -1,39 +1,93 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#fef7ff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141218" media="(prefers-color-scheme: dark)">
   <title>Runsvdir Manager</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="header">
-    <div class="header-left">
-      <h1>Runsvdir</h1>
-      <span id="daemon-badge" class="badge badge-down">daemon stopped</span>
-    </div>
-    <button id="btn-refresh" class="btn-icon" title="Refresh">&#x21bb;</button>
-  </header>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="top-bar-content">
+        <div class="app-heading">
+          <span class="app-mark" aria-hidden="true"><i data-lucide="square-terminal"></i></span>
+          <div>
+            <h1>Runsvdir Manager</h1>
+            <span id="daemon-badge" class="daemon-label daemon-down">Daemon stopped</span>
+          </div>
+        </div>
+        <button id="btn-refresh" class="icon-button top-action" type="button" title="Refresh" aria-label="Refresh">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+      </div>
+    </header>
 
-  <nav class="tabs">
-    <button class="tab active" data-tab="services">Services</button>
-    <button class="tab" data-tab="definitions">Definitions</button>
-  </nav>
+    <main class="page-container">
+      <section id="tab-services" class="tab-content active" role="tabpanel" aria-labelledby="nav-services">
+        <div id="summary-card" class="summary-card daemon-offline">
+          <div class="summary-decoration" aria-hidden="true"><i data-lucide="terminal"></i></div>
+          <div class="summary-copy">
+            <span class="summary-eyebrow">Service supervisor</span>
+            <div class="summary-state">
+              <span class="status-dot" aria-hidden="true"></span>
+              <strong id="daemon-state">Checking daemon...</strong>
+            </div>
+            <p id="daemon-detail">Reading the runsvdir process state</p>
+          </div>
+          <div id="stats-bar" class="summary-metrics" role="group" aria-label="Service statistics"></div>
+        </div>
 
-  <main>
-    <section id="tab-services" class="tab-content active">
-      <div class="stats" id="stats-bar"></div>
-      <div id="service-list" class="card-list"></div>
-      <div id="services-empty" class="empty hidden">No active services. Link a definition below to get started.</div>
-    </section>
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Supervisor</span>
+            <h2>Active services</h2>
+          </div>
+        </div>
 
-    <section id="tab-definitions" class="tab-content">
-      <div id="def-list" class="card-list"></div>
-      <div id="defs-empty" class="empty hidden">No service definitions found in /data/adb/modules/*/sv/ or /data/adb/sv/</div>
-    </section>
-  </main>
+        <div id="service-list" class="service-list"></div>
+        <div id="services-empty" class="empty-state hidden">
+          <span class="empty-icon" aria-hidden="true"><i data-lucide="inbox"></i></span>
+          <h3>No active services</h3>
+          <p>Link a service definition to get started.</p>
+        </div>
+      </section>
 
-  <div id="toast" class="toast hidden"></div>
+      <section id="tab-definitions" class="tab-content" role="tabpanel" aria-labelledby="nav-definitions">
+        <div class="page-intro">
+          <span class="page-intro-icon" aria-hidden="true"><i data-lucide="blocks"></i></span>
+          <div>
+            <span class="section-kicker">Available sources</span>
+            <h2>Service definitions</h2>
+            <p>Link definitions into the supervised service directory.</p>
+          </div>
+        </div>
+
+        <div id="def-list" class="definition-list"></div>
+        <div id="defs-empty" class="empty-state hidden">
+          <span class="empty-icon" aria-hidden="true"><i data-lucide="folder-search"></i></span>
+          <h3>No definitions found</h3>
+          <p>Checked module service folders and <code>/data/adb/sv/</code>.</p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" role="tablist" aria-label="Primary navigation">
+      <button id="nav-services" class="tab active" type="button" role="tab" data-tab="services" aria-controls="tab-services" aria-selected="true">
+        <span class="nav-icon" aria-hidden="true"><i data-lucide="activity"></i></span>
+        <span class="nav-label">Services</span>
+      </button>
+      <button id="nav-definitions" class="tab" type="button" role="tab" data-tab="definitions" aria-controls="tab-definitions" aria-selected="false">
+        <span class="nav-icon" aria-hidden="true"><i data-lucide="blocks"></i></span>
+        <span class="nav-label">Definitions</span>
+      </button>
+    </nav>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   <script type="module" src="app.js"></script>
 </body>

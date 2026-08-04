@@ -1,4 +1,23 @@
 import { exec } from 'kernelsu';
+import {
+  Activity,
+  Blocks,
+  CircleAlert,
+  FolderSearch,
+  Inbox,
+  Link2,
+  Play,
+  Power,
+  PowerOff,
+  RefreshCw,
+  RotateCw,
+  ScrollText,
+  Square,
+  SquareTerminal,
+  Terminal,
+  Unlink,
+  createIcons
+} from 'lucide';
 
 var SVDIR = '/data/adb/runsvdir/service';
 var PIDFILE = '/data/adb/runsvdir/run/runsvdir.pid';
@@ -42,12 +61,21 @@ async function checkDaemon() {
 
 function renderDaemon(running) {
   var badge = document.getElementById('daemon-badge');
+  var card = document.getElementById('summary-card');
+  var state = document.getElementById('daemon-state');
+  var detail = document.getElementById('daemon-detail');
   if (running) {
-    badge.textContent = 'daemon running';
-    badge.className = 'badge badge-up';
+    badge.textContent = 'Daemon running';
+    badge.className = 'daemon-label daemon-up';
+    card.classList.remove('daemon-offline');
+    state.textContent = 'Supervisor online';
+    detail.textContent = 'runsvdir is monitoring the active service directory';
   } else {
-    badge.textContent = 'daemon stopped';
-    badge.className = 'badge badge-down';
+    badge.textContent = 'Daemon stopped';
+    badge.className = 'daemon-label daemon-down';
+    card.classList.add('daemon-offline');
+    state.textContent = 'Supervisor offline';
+    detail.textContent = 'Service changes will not be supervised until it starts';
   }
 }
 
@@ -232,7 +260,42 @@ async function unlinkService(name) {
 
 // --- Render helpers ---
 
-var stateClassMap = { run: 'badge-up', down: 'badge-down', finish: 'badge-finish', wait: 'badge-down' };
+var iconSet = {
+  Activity: Activity,
+  Blocks: Blocks,
+  CircleAlert: CircleAlert,
+  FolderSearch: FolderSearch,
+  Inbox: Inbox,
+  Link2: Link2,
+  Play: Play,
+  Power: Power,
+  PowerOff: PowerOff,
+  RefreshCw: RefreshCw,
+  RotateCw: RotateCw,
+  ScrollText: ScrollText,
+  Square: Square,
+  SquareTerminal: SquareTerminal,
+  Terminal: Terminal,
+  Unlink: Unlink
+};
+
+var stateViewMap = {
+  run: { card: 'status-running', chip: 'running', label: 'Running', icon: 'activity' },
+  down: { card: 'status-stopped', chip: 'stopped', label: 'Stopped', icon: 'square' },
+  wait: { card: 'status-stopped', chip: 'stopped', label: 'Waiting', icon: 'square' },
+  finish: { card: 'status-warning', chip: 'warning', label: 'Finished', icon: 'circle-alert' },
+  warn: { card: 'status-warning', chip: 'warning', label: 'Warning', icon: 'circle-alert' },
+  fail: { card: 'status-error', chip: 'error', label: 'Error', icon: 'circle-alert' },
+  unknown: { card: 'status-neutral', chip: '', label: 'Unknown', icon: 'activity' }
+};
+
+var actionViewMap = {
+  up: { label: 'Start', icon: 'play', cls: 'action-positive' },
+  down: { label: 'Stop', icon: 'square', cls: 'action-danger' },
+  restart: { label: 'Restart', icon: 'rotate-cw', cls: 'action-primary' },
+  enable: { label: 'Enable', icon: 'power', cls: 'action-positive' },
+  disable: { label: 'Disable', icon: 'power-off', cls: 'action-danger' }
+};
 
 function formatUptime(s) {
   if (s < 60) return s + 's';
@@ -250,105 +313,132 @@ function attr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
 
-function renderServiceCard(svc) {
-  var cls = stateClassMap[svc.state] || 'badge-dim';
-  var label = svc.error ? 'error' : svc.state;
-  var typeTag = svc.isLink
-    ? '<span class="tag">symlink &rarr; ' + esc(svc.target) + '</span>'
-    : '<span class="tag">manual</span>';
+function renderIcons() {
+  createIcons({ icons: iconSet });
+}
 
-  var parts = [];
-  if (svc.pid) parts.push('pid ' + svc.pid);
-  if (svc.uptime > 0 || svc.state === 'run') parts.push(formatUptime(svc.uptime));
-  if (svc.extra) parts.push(svc.extra);
-  if (svc.hasDown) {
-    parts.push('<span class="badge badge-down sbadge">disabled</span>');
-  } else if (svc.state !== 'unknown' && svc.state !== 'fail' && svc.state !== 'warn') {
-    parts.push('<span class="badge badge-up sbadge">enabled</span>');
+function icon(name) {
+  return '<i data-lucide="' + name + '" aria-hidden="true"></i>';
+}
+
+function getStateView(state, hasError) {
+  if (hasError) return stateViewMap.fail;
+  return stateViewMap[state] || stateViewMap.unknown;
+}
+
+function renderMeta(parts, className) {
+  var html = [];
+  for (var i = 0; i < parts.length; i++) {
+    html.push('<span' + (i ? ' class="meta-dot"' : '') + '>' + parts[i] + '</span>');
   }
-  if (svc.error) {
-    parts.push('<span class="badge badge-down sbadge">' + esc(svc.error) + '</span>');
-  }
+  return '<div class="' + className + '">' + html.join('') + '</div>';
+}
 
-  var sep = '<span class="sep">|</span>';
-  var n = attr(svc.name);
-
-  var subHtml = '';
-  if (svc.hasLog) {
-    var lName = svc.name + '/log';
-    var ln = attr(lName);
-    var lState = svc.logState || 'down';
-    var lCls = stateClassMap[lState] || 'badge-down';
-    var lMeta = [];
-    if (svc.logPid) lMeta.push('pid ' + svc.logPid);
-    if (svc.logUptime > 0) lMeta.push(formatUptime(svc.logUptime));
-    if (svc.logHasDown) {
-      lMeta.push('<span class="badge badge-down sbadge">disabled</span>');
-    } else if (lState && lState !== 'unknown' && lState !== 'fail' && lState !== 'warn') {
-      lMeta.push('<span class="badge badge-up sbadge">enabled</span>');
-    }
-    subHtml = [
-      '<div class="subsvc">',
-      '<div class="subsvc-header">',
-      '<span class="subsvc-title">log</span>',
-      '<span class="badge ' + lCls + '">' + lState + '</span>',
-      '</div>',
-      lMeta.length ? '<div class="subsvc-meta">' + lMeta.join(sep) + '</div>' : '',
-      '<div class="subsvc-actions">',
-      '<button class="btn btn-green" data-svc="' + ln + '" data-act="up">Up</button>',
-      '<button class="btn btn-red" data-svc="' + ln + '" data-act="down">Down</button>',
-      '<button class="btn btn-accent" data-svc="' + ln + '" data-act="restart">Restart</button>',
-      svc.logHasDown
-        ? '<button class="btn btn-green" data-svc="' + ln + '" data-act="enable">Enable</button>'
-        : '<button class="btn btn-red" data-svc="' + ln + '" data-act="disable">Disable</button>',
-      '</div>',
-      '</div>'
-    ].join('');
-  }
-
+function renderServiceAction(name, action) {
+  var view = actionViewMap[action];
+  var label = view.label + ' ' + name;
   return [
-    '<div class="card">',
-    '<div class="card-header">',
-    '<span class="card-title">' + esc(svc.name) + '</span>',
-    '<span class="badge ' + cls + '">' + label + '</span>',
-    '</div>',
-    '<div class="card-meta">',
-    typeTag,
-    parts.length ? sep + parts.join(sep) : '',
-    '</div>',
-    '<div class="card-actions">',
-    '<button class="btn btn-green" data-svc="' + n + '" data-act="up">Up</button>',
-    '<button class="btn btn-red" data-svc="' + n + '" data-act="down">Down</button>',
-    '<button class="btn btn-accent" data-svc="' + n + '" data-act="restart">Restart</button>',
-    svc.hasDown
-      ? '<button class="btn btn-green" data-svc="' + n + '" data-act="enable">Enable</button>'
-      : '<button class="btn btn-red" data-svc="' + n + '" data-act="disable">Disable</button>',
-    '</div>',
-    subHtml,
+    '<button type="button" class="action-button ' + view.cls + '"',
+    ' data-svc="' + attr(name) + '" data-act="' + action + '"',
+    ' title="' + attr(label) + '" aria-label="' + attr(label) + '">',
+    icon(view.icon),
+    '</button>'
+  ].join('');
+}
+
+function renderServiceActions(name, isDisabled) {
+  return [
+    '<div class="card-actions" role="group" aria-label="Actions for ' + attr(name) + '">',
+    renderServiceAction(name, 'up'),
+    renderServiceAction(name, 'down'),
+    renderServiceAction(name, 'restart'),
+    renderServiceAction(name, isDisabled ? 'enable' : 'disable'),
     '</div>'
   ].join('');
 }
 
-function renderDefCard(def, linked) {
-  var n = attr(def.name);
-  var m = attr(def.module);
-  var src = attr(def.source);
-  var tagLabel = esc(def.module) + (def.source === 'unified' ? ' (unified)' : '');
+function renderServiceCard(svc) {
+  var view = getStateView(svc.state, svc.error);
+  var parts = [];
+  if (svc.pid) parts.push('PID ' + svc.pid);
+  if (svc.uptime > 0 || svc.state === 'run') parts.push('Uptime ' + formatUptime(svc.uptime));
+  if (svc.extra) parts.push(esc(svc.extra));
+  parts.push(svc.hasDown ? 'Disabled at boot' : 'Enabled at boot');
+  if (svc.error) parts.push(esc(svc.error));
+
+  var origin = svc.isLink ? svc.target : 'Manual service directory';
+  var originIcon = svc.isLink ? 'link-2' : 'folder-search';
+  var subHtml = '';
+
+  if (svc.hasLog) {
+    var logName = svc.name + '/log';
+    var logState = svc.logState || 'down';
+    var logView = getStateView(logState, false);
+    var logMeta = [];
+    if (svc.logPid) logMeta.push('PID ' + svc.logPid);
+    if (svc.logUptime > 0 || logState === 'run') logMeta.push('Uptime ' + formatUptime(svc.logUptime));
+    logMeta.push(svc.logHasDown ? 'Disabled at boot' : 'Enabled at boot');
+
+    subHtml = [
+      '<section class="subsvc" aria-label="Log service for ' + attr(svc.name) + '">',
+      '<div class="subsvc-header">',
+      '<span class="subsvc-symbol">' + icon('scroll-text') + '</span>',
+      '<div class="subsvc-copy">',
+      '<div class="subsvc-title-row">',
+      '<h4 class="subsvc-title">Log service</h4>',
+      '<span class="status-chip ' + logView.chip + '">' + logView.label + '</span>',
+      '</div>',
+      renderMeta(logMeta, 'subsvc-meta'),
+      '</div>',
+      '</div>',
+      renderServiceActions(logName, svc.logHasDown),
+      '</section>'
+    ].join('');
+  }
+
   return [
-    '<div class="card' + (linked ? ' def-linked' : '') + '">',
-    '<div class="card-header">',
-    '<span class="card-title">' + esc(def.name) + '</span>',
-    '<span class="badge ' + (linked ? 'badge-up' : 'badge-dim') + '">' + (linked ? 'linked' : 'unlinked') + '</span>',
+    '<article class="service-card ' + view.card + '">',
+    '<div class="service-header">',
+    '<span class="service-symbol">' + icon(view.icon) + '</span>',
+    '<div class="service-copy">',
+    '<div class="service-title-row">',
+    '<h3 class="service-title">' + esc(svc.name) + '</h3>',
+    '<span class="status-chip ' + view.chip + '">' + view.label + '</span>',
     '</div>',
-    '<div class="card-meta">',
-    '<span class="tag">' + tagLabel + '</span>',
+    renderMeta(parts, 'service-meta'),
     '</div>',
-    '<div class="card-actions">',
-    linked
-      ? '<button class="btn btn-red" data-def="' + n + '" data-act="unlink">Unlink</button>'
-      : '<button class="btn btn-accent2" data-def="' + n + '" data-defmod="' + m + '" data-defsrc="' + src + '" data-act="link">Link</button>',
     '</div>',
-    '</div>'
+    '<div class="service-origin">' + icon(originIcon) + '<span>' + esc(origin) + '</span></div>',
+    renderServiceActions(svc.name, svc.hasDown),
+    subHtml,
+    '</article>'
+  ].join('');
+}
+
+function renderDefCard(def, linked) {
+  var name = attr(def.name);
+  var moduleName = attr(def.module);
+  var source = attr(def.source);
+  var sourceLabel = def.source === 'unified' ? 'Unified directory' : 'Module ' + esc(def.module);
+  var actionLabel = (linked ? 'Unlink ' : 'Link ') + def.name;
+  var actionHtml = linked
+    ? '<button type="button" class="action-button action-danger" data-def="' + name + '" data-act="unlink" title="' + attr(actionLabel) + '" aria-label="' + attr(actionLabel) + '">' + icon('unlink') + '</button>'
+    : '<button type="button" class="action-button action-primary" data-def="' + name + '" data-defmod="' + moduleName + '" data-defsrc="' + source + '" data-act="link" title="' + attr(actionLabel) + '" aria-label="' + attr(actionLabel) + '">' + icon('link-2') + '</button>';
+
+  return [
+    '<article class="definition-card">',
+    '<div class="definition-main">',
+    '<span class="definition-symbol' + (linked ? ' linked' : '') + '">' + icon(linked ? 'link-2' : 'blocks') + '</span>',
+    '<div class="definition-copy">',
+    '<div class="definition-title-row">',
+    '<h3 class="definition-title">' + esc(def.name) + '</h3>',
+    '<span class="status-chip ' + (linked ? 'linked' : '') + '">' + (linked ? 'Linked' : 'Available') + '</span>',
+    '</div>',
+    '<div class="definition-meta">' + sourceLabel + '</div>',
+    '</div>',
+    '<div class="definition-action">' + actionHtml + '</div>',
+    '</div>',
+    '</article>'
   ].join('');
 }
 
@@ -358,27 +448,27 @@ async function renderServices() {
   var list = document.getElementById('service-list');
   var empty = document.getElementById('services-empty');
   var bar = document.getElementById('stats-bar');
+  if (empty._defaultHtml) empty.innerHTML = empty._defaultHtml;
 
   try {
     var services = await getAllServices();
+    var running = 0;
+    var stopped = 0;
+    for (var i = 0; i < services.length; i++) {
+      if (services[i].state === 'run') running++;
+      else stopped++;
+    }
+    bar.innerHTML = [
+      '<div class="metric"><strong>' + services.length + '</strong><span>Total</span></div>',
+      '<div class="metric"><strong>' + running + '</strong><span>Running</span></div>',
+      '<div class="metric"><strong>' + stopped + '</strong><span>Stopped</span></div>'
+    ].join('');
+
     if (!services.length) {
       list.innerHTML = '';
-      bar.innerHTML = '';
       empty.classList.remove('hidden');
     } else {
       empty.classList.add('hidden');
-
-      var running = 0, down = 0;
-      for (var i = 0; i < services.length; i++) {
-        if (services[i].state === 'run') running++;
-        else if (services[i].state === 'down') down++;
-      }
-      bar.innerHTML = [
-        '<span><span class="stat-val">' + services.length + '</span> total</span>',
-        '<span><span class="stat-val">' + running + '</span> running</span>',
-        '<span><span class="stat-val">' + down + '</span> stopped</span>'
-      ].join('');
-
       var html = [];
       for (var j = 0; j < services.length; j++) {
         html.push(renderServiceCard(services[j]));
@@ -387,15 +477,20 @@ async function renderServices() {
     }
   } catch (e) {
     list.innerHTML = '';
-    bar.innerHTML = '';
+    bar.innerHTML = [
+      '<div class="metric"><strong>0</strong><span>Total</span></div>',
+      '<div class="metric"><strong>0</strong><span>Running</span></div>',
+      '<div class="metric"><strong>0</strong><span>Stopped</span></div>'
+    ].join('');
     empty.classList.remove('hidden');
-    empty.textContent = 'Error loading services: ' + e.message;
+    empty.innerHTML = '<span class="empty-icon">' + icon('circle-alert') + '</span><h3>Could not load services</h3><p>' + esc(e.message) + '</p>';
   }
 }
 
 async function renderDefinitions() {
   var list = document.getElementById('def-list');
   var empty = document.getElementById('defs-empty');
+  if (empty._defaultHtml) empty.innerHTML = empty._defaultHtml;
 
   try {
     var names = await listServiceNames();
@@ -417,19 +512,27 @@ async function renderDefinitions() {
   } catch (e) {
     list.innerHTML = '';
     empty.classList.remove('hidden');
-    empty.textContent = 'Error loading definitions: ' + e.message;
+    empty.innerHTML = '<span class="empty-icon">' + icon('circle-alert') + '</span><h3>Could not load definitions</h3><p>' + esc(e.message) + '</p>';
   }
 }
 
 async function refresh() {
   if (refreshing) return;
+  var button = document.getElementById('btn-refresh');
   refreshing = true;
+  button.disabled = true;
+  button.classList.add('is-refreshing');
+  button.setAttribute('aria-busy', 'true');
   try {
     var running = await checkDaemon();
     renderDaemon(running);
     await Promise.all([renderServices(), renderDefinitions()]);
   } finally {
     refreshing = false;
+    button.disabled = false;
+    button.classList.remove('is-refreshing');
+    button.removeAttribute('aria-busy');
+    renderIcons();
   }
 }
 
@@ -441,11 +544,16 @@ function bindTabs() {
     tabs[i].addEventListener('click', function () {
       var target = this.dataset.tab;
       var allTabs = document.querySelectorAll('.tab');
-      for (var j = 0; j < allTabs.length; j++) allTabs[j].classList.remove('active');
+      for (var j = 0; j < allTabs.length; j++) {
+        allTabs[j].classList.remove('active');
+        allTabs[j].setAttribute('aria-selected', 'false');
+      }
       var allPanels = document.querySelectorAll('.tab-content');
       for (var k = 0; k < allPanels.length; k++) allPanels[k].classList.remove('active');
       this.classList.add('active');
+      this.setAttribute('aria-selected', 'true');
       document.getElementById('tab-' + target).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 }
@@ -457,9 +565,11 @@ function bindServiceActions() {
     var name = btn.dataset.svc;
     var act = btn.dataset.act;
     var labels = { up: 'Starting ', down: 'Stopping ', restart: 'Restarting ', enable: 'Enabling ', disable: 'Disabling ' };
+    btn.disabled = true;
     var ok = await svAction(name, act);
     toast(labels[act] + name + (ok ? ' OK' : ' failed'), !ok);
-    if (ok) refresh();
+    if (ok) await refresh();
+    if (btn.isConnected) btn.disabled = false;
   });
 }
 
@@ -469,6 +579,7 @@ function bindDefActions() {
     if (!btn) return;
     var name = btn.dataset.def;
     var act = btn.dataset.act;
+    btn.disabled = true;
 
     if (act === 'link') {
       var mod = btn.dataset.defmod;
@@ -479,17 +590,21 @@ function bindDefActions() {
       var ok = await unlinkService(name);
       toast('Unlinking ' + name + (ok ? ' OK' : ' failed'), !ok);
     }
-    refresh();
+    await refresh();
+    if (btn.isConnected) btn.disabled = false;
   });
 }
 
 // --- Init ---
 
 function init() {
+  var emptyStates = document.querySelectorAll('.empty-state');
+  for (var i = 0; i < emptyStates.length; i++) emptyStates[i]._defaultHtml = emptyStates[i].innerHTML;
   bindTabs();
   document.getElementById('btn-refresh').addEventListener('click', refresh);
   bindServiceActions();
   bindDefActions();
+  renderIcons();
   refresh();
   refreshTimer = setInterval(refresh, REFRESH_MS);
 }
