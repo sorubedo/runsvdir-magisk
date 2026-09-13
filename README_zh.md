@@ -2,6 +2,10 @@
 
 基于 Runit 的 Android 服务管理器。将 Termux 预编译的 `runsvdir`、`runsv`、`sv`、`svlogd`、`chpst`、`runsvchdir` 二进制打包为 Magisk/KernelSU 模块，实现持久化的服务监管。
 
+## 2.0.0
+
+本版本进行职责收敛：模块只负责安装 runit 工具并在开机时启动 `runsvdir`，服务定义和链接由用户管理。
+
 [English](README.md)
 
 ## 环境要求
@@ -27,6 +31,8 @@
 ```
 /data/adb/runsvdir/service/
 ```
+
+使用服务名调用 `sv` 时设置 `SVDIR=/data/adb/runsvdir/service`，也可以直接传入完整服务路径。
 
 ---
 
@@ -98,18 +104,13 @@ pgrep runsvdir
 ├── system/bin/
 │   ├── runsvdir
 │   ├── runsv
-│   ├── sv                       # 包装脚本（自动设置 SVDIR → .runit/sv）
-│   ├── .runit/sv                # 真正的 sv 二进制
+│   ├── sv
 │   ├── svlogd
 │   ├── chpst
 │   ├── runsvchdir
 │   ├── runsvdir-magisk
 │   ├── sv-enable
 │   └── sv-disable
-├── webroot/                       # WebUI（KernelSU / MMRL）
-│   ├── index.html
-│   ├── *.js
-│   └── *.css
 ```
 
 ### 数据目录（持久化）
@@ -176,71 +177,11 @@ chmod +x /data/adb/runsvdir/service/<服务名>/log/run   # 如有日志
 
 脚本就绪后 runsvdir 会自动拉起运行。
 
-### 模块自带服务
-
-模块可将服务放置在 `/data/adb/modules/<模块id>/sv/` 中，通过符号链接启用：
-
-```
-/data/adb/modules/<模块id>/
-└── sv/
-    └── <服务名>/
-        ├── run
-        └── log/
-            └── run
-```
-
-```bash
-ln -s /data/adb/modules/<模块id>/sv/<服务名> /data/adb/runsvdir/service/<服务名>
-```
-
-### 统一服务目录
-
-为克服 Magisk 模块安装器"整体替换"带来的数据丢失问题，本项目提供了一个持久化、可合并的统一服务目录 `/data/adb/sv/`。与模块自身的 `sv/` 目录不同（模块更新/安装时会被整体替换），此目录：
-
-- **跨模块共享** — 所有模块的服务定义存放在同一目录下
-- **更新不丢失** — 用户手动创建的 `down` 文件、自定义的 `conf` 等修改不会因模块更新而消失
-
-```
-/data/adb/sv/
-├── myservice/
-│   ├── run
-│   └── conf
-└── ...
-```
-
-WebUI 的 **Definitions** 标签页会显示此目录中的所有服务，并标注 `(unified)`。
-
-### 模块开发者须知 — 使用统一目录
-
-如果你的模块向 `/data/adb/sv/` 提供服务，必须使用**合并复制**而非目录替换，以避免清除其他模块的服务。在你的模块的 `customize.sh` 和 `uninstall.sh` 中实现：
-
-**`customize.sh`**（安装时）：
-
-```bash
-# 将服务复制到统一目录（合并，不替换）
-cp -r "$MODPATH/service/"* /data/adb/sv/ 2>/dev/null
-```
-
-**`uninstall.sh`**（卸载时）：
-
-```bash
-# 仅删除你自己的服务目录
-rm -rf /data/adb/sv/<你的服务名>
-```
-
 ---
 
-## WebUI
-
-本模块附带 WebUI，可在 KernelSU / MMRL 管理器中使用，提供：
-
-- **Services** 标签 — 查看所有已激活服务的运行状态、PID、运行时长；执行 up / down / restart / enable / disable
-- **Definitions** 标签 — 浏览所有模块的服务定义（`/data/adb/modules/*/sv/`）和统一目录（`/data/adb/sv/`）；通过符号链接启用/禁用服务
-
-WebUI 使用纯 HTML/CSS/JS 编写，由 [Parcel](https://parceljs.org/) 打包。源码位于 `webui/`，构建输出到 `magisk/webroot/`。
+## 构建
 
 ```bash
-npm run build     # 打包 WebUI → magisk/webroot/
 ./dl-bins.sh      # 下载所有 ABI 的 Termux runit 二进制
 ./package.sh      # 为每个 ABI 生成 out/runsvdir-magisk-<version>-<abi>.zip
 ```
@@ -251,6 +192,6 @@ npm run build     # 打包 WebUI → magisk/webroot/
 
 ## 许可
 
-本项目（shell 脚本、WebUI、模块打包） — [MIT](LICENSE)。
+本项目（shell 脚本、模块打包） — [MIT](LICENSE)。
 
 附带二进制来自 [Termux 的 runit 包](https://github.com/termux/termux-packages/tree/master/packages/runit)（基于 [grimler/runit](https://git.sr.ht/~grimler/runit)） — BSD 3-Clause。

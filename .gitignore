@@ -1,8 +1,5 @@
-node_modules/
-.parcel-cache/
 build/
 /bin/
 /out/
 *.zip
-magisk/webroot/
 ref/

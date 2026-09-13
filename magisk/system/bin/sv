@@ -1,3 +1,0 @@
-#!/system/bin/sh
-[ -z "$SVDIR" ] && export SVDIR=/data/adb/runsvdir/service
-exec /system/bin/.runit/sv "$@"

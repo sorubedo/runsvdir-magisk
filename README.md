@@ -2,6 +2,10 @@
 
 A Runit-based Android service manager. Packages Termux-prebuild `runsvdir`, `runsv`, `sv`, `svlogd`, `chpst`, `runsvchdir` binaries into a Magisk/KernelSU module for persistent service supervision.
 
+## 2.0.0
+
+Refactored around a single responsibility: install the runit tools and start `runsvdir` at boot. Service definitions and links remain user-managed.
+
 [中文文档](README_zh.md)
 
 ## Requirements
@@ -28,6 +32,8 @@ After installation and reboot, `runsvdir` starts automatically. The service dire
 ```
 /data/adb/runsvdir/service/
 ```
+
+Set `SVDIR=/data/adb/runsvdir/service` when using service names with `sv`, or pass a full service path.
 
 ---
 
@@ -100,18 +106,13 @@ pgrep runsvdir
 ├── system/bin/
 │   ├── runsvdir
 │   ├── runsv
-│   ├── sv                       # wrapper (sets SVDIR → .runit/sv)
-│   ├── .runit/sv                # real sv binary
+│   ├── sv
 │   ├── svlogd
 │   ├── chpst
 │   ├── runsvchdir
 │   ├── runsvdir-magisk
 │   ├── sv-enable
 │   └── sv-disable
-├── webroot/                      # WebUI (KernelSU / MMRL)
-│   ├── index.html
-│   ├── *.js
-│   └── *.css
 ```
 
 ### Data directory (persistent)
@@ -177,68 +178,11 @@ chmod +x /data/adb/runsvdir/service/<svc-name>/log/run   # if logging
 
 Once the scripts are ready, runsvdir will launch them automatically.
 
-### Module-provided services
-
-Modules can place service definitions in `/data/adb/modules/<module_id>/sv/` and enable them via symlinks:
-
-```
-/data/adb/modules/<module_id>/
-└── sv/
-    └── <svc-name>/
-        ├── run
-        └── log/
-            └── run
-```
-
-```bash
-ln -s /data/adb/modules/<module_id>/sv/<svc-name> /data/adb/runsvdir/service/<svc-name>
-```
-
-### Unified service directory
-
-A persistent, merge-friendly service directory is provided at `/data/adb/sv/`. Unlike module-specific `sv/` directories — which are replaced entirely on module update/install — this directory is shared across all modules and **persists across module updates**. User modifications (e.g., `down` files, custom `conf`) placed here will never be lost.
-
-```
-/data/adb/sv/
-├── myservice/
-│   ├── run
-│   └── conf
-└── ...
-```
-
-All service definitions from `/data/adb/sv/` appear in the WebUI's **Definitions** tab with a `(unified)` label.
-
-### For module developers — using the unified directory
-
-If your module ships services into `/data/adb/sv/`, you must use **merge-copy** (not directory replacement) to avoid wiping other modules' services. Implement this in your module's `customize.sh` and `uninstall.sh`:
-
-**`customize.sh`** (installation):
-
-```bash
-# Copy services into the unified directory (merge, don't replace)
-cp -r "$MODPATH/service/"* /data/adb/sv/ 2>/dev/null
-```
-
-**`uninstall.sh`** (removal):
-
-```bash
-# Remove only your own service directories from the unified directory
-rm -rf /data/adb/sv/<your-service-name>
-```
-
 ---
 
-## WebUI
-
-This module includes a WebUI for KernelSU / MMRL manager apps. It provides:
-
-- **Services** tab — view all active services with status, PID, uptime; up / down / restart / enable / disable
-- **Definitions** tab — browse service definitions from all modules (`/data/adb/modules/*/sv/`) and the unified directory (`/data/adb/sv/`); link / unlink them into the active service directory
-
-The WebUI is built with vanilla HTML/CSS/JS and bundled with [Parcel](https://parceljs.org/). Source files are in `webui/`, built output goes to `magisk/webroot/`.
+## Build
 
 ```bash
-npm run build     # bundle WebUI → magisk/webroot/
 ./dl-bins.sh      # download Termux runit binaries for all ABIs
 ./package.sh      # create one out/runsvdir-magisk-<version>-<abi>.zip per ABI
 ```
@@ -249,6 +193,6 @@ Each ZIP contains only one ABI. Pass one or more ABI names to `package.sh` to bu
 
 ## License
 
-This project (shell scripts, WebUI, module packaging) — [MIT](LICENSE).
+This project (shell scripts, module packaging) — [MIT](LICENSE).
 
 Bundled runit binaries from [Termux's runit package](https://github.com/termux/termux-packages/tree/master/packages/runit) (based on [grimler/runit](https://git.sr.ht/~grimler/runit)) — BSD 3-Clause.

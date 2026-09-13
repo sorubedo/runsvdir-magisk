@@ -18,7 +18,7 @@ declare -A BIN_ABI=(
 usage() {
     echo "Usage: $0 [arm64-v8a|armeabi-v7a|x86_64|x86 ...]"
     echo "With no ABI arguments, packages all supported ABIs separately."
-    echo "Run npm run build and dl-bins.sh before packaging."
+    echo "Run dl-bins.sh before packaging."
 }
 
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
