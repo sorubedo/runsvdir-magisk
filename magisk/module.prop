@@ -1,6 +1,6 @@
 id=runsvdir
 name=Runsvdir Service Supervisor
-version=v2.0.1
-versionCode=201
+version=v2.0.2
+versionCode=202
 author=sorubedo
 description=Minimal runit service supervision for Android. Installs upstream runit tools and starts runsvdir at boot.
