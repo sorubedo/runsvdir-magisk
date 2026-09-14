@@ -32,7 +32,7 @@
 /data/adb/runsvdir/service/
 ```
 
-使用服务名调用 `sv` 时设置 `SVDIR=/data/adb/runsvdir/service`，也可以直接传入完整服务路径。
+使用服务名调用 `sv`、`sv-enable`、`sv-disable` 时设置 `SVDIR=/data/adb/runsvdir/service`；`sv` 也可以直接传入完整服务路径。
 
 ---
 

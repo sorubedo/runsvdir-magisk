@@ -33,7 +33,7 @@ After installation and reboot, `runsvdir` starts automatically. The service dire
 /data/adb/runsvdir/service/
 ```
 
-Set `SVDIR=/data/adb/runsvdir/service` when using service names with `sv`, or pass a full service path.
+Set `SVDIR=/data/adb/runsvdir/service` when using service names with `sv`, `sv-enable` or `sv-disable`; `sv` also accepts a full service path.
 
 ---
 

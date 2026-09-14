@@ -1,21 +1,20 @@
 #!/system/bin/sh
 
-if [ -z "$1" ]; then
-    echo "Usage: sv-enable <service-name>"
+show_help(){
+
+    printf 'Usage:
+    sv-enable <service-name>
+
+    Enabling a service will make it autostart
+'
+}
+if [ -z "$1" ];then
+    show_help
     exit 1
 fi
-
-if [ -z "$SVDIR" ]; then
-    SVDIR=/data/adb/runsvdir/service
-fi
-
-SVC="$SVDIR/$1"
-
-if [ ! -d "$SVC" ]; then
-    echo "Error: service '$1' not found in $SVDIR"
+if [ -u "$SVDIR" ];then
+    >&2 echo "Error: SVDIR not set"
     exit 1
 fi
-
-rm -f "$SVC/down"
-sv up "$1"
-echo "Service '$1' enabled and starting"
+rm -f "$SVDIR/$1/down"
+sv up $1
