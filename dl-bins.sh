@@ -11,17 +11,10 @@ BINS_DIR="$PROJECT_DIR/bin"
 OUT_DIR="$PROJECT_DIR/out"
 REPO_BASE="https://packages.termux.dev/apt/termux-main"
 POOL="pool/main/r/runit"
-RUNIT_VERSION="2.1.2"
-TERMUX_PACKAGE_VERSION="${RUNIT_VERSION}-4"
-
-declare -A ARCH_MAP=(
-    ["aarch64"]="runit_${TERMUX_PACKAGE_VERSION}_aarch64.deb"
-    ["arm"]="runit_${TERMUX_PACKAGE_VERSION}_arm.deb"
-    ["i686"]="runit_${TERMUX_PACKAGE_VERSION}_i686.deb"
-    ["x86_64"]="runit_${TERMUX_PACKAGE_VERSION}_x86_64.deb"
-)
+POOL_URL="$REPO_BASE/$POOL"
 
 BINARIES=("runsvdir" "runsv" "sv" "svlogd" "chpst" "runsvchdir")
+ARCHES=("aarch64" "arm" "i686" "x86_64")
 
 TMPDIRS=()
 cleanup() {
@@ -31,13 +24,47 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for ARCH in "${!ARCH_MAP[@]}"; do
-    DEB="${ARCH_MAP[$ARCH]}"
-    URL="$REPO_BASE/$POOL/$DEB"
-    DEST="$BINS_DIR/$ARCH"
+# --- Resolve the newest runit .deb available for each architecture ---
+# Rather than pinning a version (which breaks whenever Termux drops the old
+# package from its pool), scrape the pool index and pick the latest per arch.
+echo "=== Resolving latest runit package from $POOL_URL ==="
+INDEX_HTML="$(curl -fsSL "$POOL_URL/")"
 
-    if [ -f "$DEST/runsvdir" ]; then
-        echo "=== $ARCH: already exists, skipping ==="
+declare -A DEB_FILE=()
+for ARCH in "${ARCHES[@]}"; do
+    LATEST="$(printf '%s\n' "$INDEX_HTML" \
+        | grep -oE "runit_[^\"'<>/]+_${ARCH}\.deb" \
+        | sort -uV \
+        | tail -n1)"
+    if [ -z "$LATEST" ]; then
+        echo "ERROR: no runit package found for $ARCH in $POOL_URL" >&2
+        exit 1
+    fi
+    DEB_FILE["$ARCH"]="$LATEST"
+    echo "  $ARCH: $LATEST"
+done
+
+# Derive the package and upstream versions from the resolved filenames.
+VERSIONS=()
+for ARCH in "${ARCHES[@]}"; do
+    VER="${DEB_FILE[$ARCH]#runit_}"
+    VER="${VER%_${ARCH}.deb}"
+    VERSIONS+=("$VER")
+done
+TERMUX_PACKAGE_VERSION="$(printf '%s\n' "${VERSIONS[@]}" | sort -V | tail -n1)"
+RUNIT_VERSION="${TERMUX_PACKAGE_VERSION%%-*}"
+echo "  package version: $TERMUX_PACKAGE_VERSION"
+echo "  upstream runit:  $RUNIT_VERSION"
+echo
+
+for ARCH in "${ARCHES[@]}"; do
+    DEB="${DEB_FILE[$ARCH]}"
+    URL="$POOL_URL/$DEB"
+    DEST="$BINS_DIR/$ARCH"
+    STAMP="$DEST/.termux-package-version"
+
+    if [ -f "$DEST/runsvdir" ] && [ "$(cat "$STAMP" 2>/dev/null)" = "$TERMUX_PACKAGE_VERSION" ]; then
+        echo "=== $ARCH: $TERMUX_PACKAGE_VERSION already present, skipping ==="
         continue
     fi
 
@@ -78,13 +105,15 @@ for ARCH in "${!ARCH_MAP[@]}"; do
     done
     patchelf --remove-rpath "$DEST/librunit.so"
 
+    printf '%s\n' "$TERMUX_PACKAGE_VERSION" > "$STAMP"
+
     rm -rf "$TMPDIR"
     echo "=== $ARCH: done ==="
 done
 
 echo ""
 echo "=== All binaries downloaded ==="
-for ARCH in "${!ARCH_MAP[@]}"; do
+for ARCH in "${ARCHES[@]}"; do
     if [ -f "$BINS_DIR/$ARCH/runsvdir" ]; then
         printf "  %-9s %s\n" "$ARCH:" "$(file "$BINS_DIR/$ARCH/runsvdir")"
     else
